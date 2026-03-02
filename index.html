@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Lifecounter v16.5</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Share+Tech+Mono&family=Sawarabi+Mincho&family=M+PLUS+Rounded+1c:wght@700&display=swap" rel="stylesheet">
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
     <style>
         :root {
             --bg-color: #000000;
@@ -44,22 +43,22 @@
         }
 
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { background-color: var(--bg-color); color: var(--text-color); font-family: var(--font-main); margin: 0; padding: 0; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; }
+        body { background-color: var(--bg-color); color: var(--text-color); font-family: var(--font-main); margin: 0; padding: 0; height: 100dvh; overflow: hidden; display: flex; flex-direction: column; transition: background-color 0.5s; }
         .scanline { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.1)); background-size: 100% 4px; pointer-events: none; z-index: 90; opacity: 0.3; }
 
         /* SCREENS */
-        #onboardingScreen, #bootScreen, #warningOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 999; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 30px; }
+        #onboardingScreen, #bootScreen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 999; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 30px; }
         .ob-logo { font-size: 2rem; color: var(--main-color); letter-spacing: 4px; margin-bottom: 40px; }
         .ob-text { color: var(--main-color); margin-bottom: 20px; min-height: 1.2em; }
         .ob-input-group { width: 100%; max-width: 300px; margin-bottom: 30px; opacity: 0; transition: opacity 1s; }
         .ob-input-group input { width: 100%; background: #111; border: 1px solid var(--main-color); color: #fff; padding: 15px; text-align: center; font-family: inherit; }
         .ob-btn { background: var(--main-color); color: #000; border: none; padding: 15px 40px; font-weight: bold; cursor: pointer; opacity: 0; transition: opacity 1s; }
         
-        /* UI ELEMENTS */
         header { height: 50px; padding: 0 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); z-index: 10; }
         .app-name { font-size: 1.1rem; letter-spacing: 2px; color: var(--main-color); cursor: pointer; }
+        
         #viewport { flex: 1; position: relative; width: 100%; overflow: hidden; }
-        .view-section { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); transition: transform 0.3s ease-out, opacity 0.3s; display: flex; flex-direction: column; opacity: 0; pointer-events: none; }
+        .view-section { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: transparent; transition: transform 0.3s ease-out, opacity 0.3s; display: flex; flex-direction: column; opacity: 0; pointer-events: none; }
         .view-center { transform: translateX(0); opacity: 1; pointer-events: auto; }
         .view-left { transform: translateX(-100%); }
         .view-right { transform: translateX(100%); }
@@ -68,7 +67,6 @@
         .main-display { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .count-days { font-size: 4.5rem; line-height: 0.9; color: var(--main-color); }
 
-        /* CARD COLORS */
         .card { background: var(--card-bg); border: 1px solid var(--border); margin-bottom: 12px; padding: 15px; border-radius: 4px; }
         .card-past .card-title, .card-past .card-days { color: var(--main-color); }
         .card-future .card-title, .card-future .card-days { color: var(--future-color); }
@@ -80,13 +78,6 @@
         .footer-nav { height: 70px; background: var(--bg-color); border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 50; }
         .nav-btn { flex: 1; text-align: center; font-size: 0.7rem; color: var(--dim-text); cursor: pointer; }
         .nav-btn.active { color: var(--main-color); font-weight: bold; }
-        #nav-future.active { color: var(--future-color); }
-
-        /* CAMERA */
-        #cameraModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 600; flex-direction: column; }
-        .video-container { flex: 1; position: relative; display: flex; justify-content: center; align-items: center; overflow: hidden; }
-        video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
-        .shutter-btn { width: 70px; height: 70px; border-radius: 50%; background: #fff; border: 5px solid #333; cursor: pointer; position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 700; }
 
         /* MODAL */
         #addModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; justify-content: center; align-items: center; }
@@ -95,12 +86,16 @@
         .input-item input, .input-item select, .input-item textarea { width: 100%; background: #000; border: 1px solid var(--border); color: #fff; padding: 10px; font-family: inherit; margin-bottom: 10px; }
         .btn-modal { flex: 1; padding: 12px; border: none; font-weight: bold; cursor: pointer; border-radius: 4px; }
         .btn-save { background: var(--main-color); color: #000; }
-        .btn-save.future-mode { background: var(--future-color); }
+        
+        #cameraModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 600; flex-direction: column; }
+        video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
+        .shutter-btn { width: 70px; height: 70px; border-radius: 50%; background: #fff; border: 5px solid #333; cursor: pointer; position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 700; }
     </style>
 </head>
 <body>
 
     <div class="scanline"></div>
+
     <div id="onboardingScreen">
         <div class="ob-logo">Lifecounter</div>
         <div class="ob-text" id="obText"></div>
@@ -183,7 +178,7 @@
         </div>
 
         <div id="cameraModal">
-            <div class="video-container"><video id="videoFeed" autoplay playsinline></video></div>
+            <video id="videoFeed" autoplay playsinline></video>
             <div class="shutter-btn" onclick="takePhoto()"></div>
         </div>
     </div>
@@ -200,6 +195,8 @@
         let futureEvents = JSON.parse(localStorage.getItem(APP_KEY + '_future')) || [];
         let deadline = Date.now() + (EMERGENCY_SEC * 1000);
         let clickCount = 0;
+        let emergencySent = false;
+        let currentModalType = 'past';
 
         window.onload = () => {
             applyTheme(CURRENT_THEME);
@@ -230,24 +227,61 @@
         }
 
         function startApp() { document.getElementById('appContainer').style.display = 'flex'; setInterval(tick, 100); renderLists(); }
+
         function tick() {
             if (!birthDate) return;
             const now = Date.now();
             const diff = now - birthDate.getTime();
+            
             document.getElementById('heroDays').innerText = Math.floor(diff/86400000);
             document.getElementById('heroSeconds').innerText = (diff/1000).toFixed(4);
+            
             const rem = Math.max(0, (deadline - now)/1000);
-            document.getElementById('skullTimerDisplay').innerText = rem.toFixed(1) + "s";
+            const timerDisplay = document.getElementById('skullTimerDisplay');
+            timerDisplay.innerText = rem.toFixed(1) + "s";
+
+            // 演出と通知
+            if (rem <= 0) {
+                document.body.style.backgroundColor = "#660000"; 
+                timerDisplay.style.color = "#ff0000";
+                
+                if (!emergencySent && TARGET_EMAIL) {
+                    emergencySent = true; 
+                    console.log("💀 緊急プロトコル発動...");
+                    const msg = `${EMERGENCY_MSG}\n\n総生存日数: ${Math.floor(diff/86400000)}日\n最終ログ: ${new Date().toLocaleString()}`;
+                    sendGasNotification("EMERGENCY ALERT", msg).then(() => {
+                        alert("GASへ通知命令を送信しました。Gmailを確認してください。");
+                    });
+                }
+            } else {
+                document.body.style.backgroundColor = "var(--bg-color)";
+                timerDisplay.style.color = "var(--dim-text)";
+                emergencySent = false;
+            }
+        }
+
+        async function sendGasNotification(type, message) {
+            const GAS_URL = "https://script.google.com/macros/s/AKfycbyLoxhIbsZcsYcpnPMrPxBhYos23sZoE32sddvQyq3HpG5yknQCb5l6Ru8sVZLAPYb25g/exec"; // ←ここを書き換えてください！
+            try {
+                await fetch(GAS_URL, {
+                    method: "POST",
+                    mode: "no-cors",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ type: type, message: message })
+                });
+                return true;
+            } catch (error) {
+                console.error("GAS送信失敗:", error);
+                return false;
+            }
         }
 
         function openModal(type) {
             currentModalType = type;
             const isSettings = (type === 'settings');
-            const saveBtn = document.getElementById('btnSaveEvent');
             document.getElementById('formFields').style.display = isSettings ? 'none' : 'block';
-            document.getElementById('settingsFields').style.display = isSetings = isSettings ? 'block' : 'none';
+            document.getElementById('settingsFields').style.display = isSettings ? 'block' : 'none';
             document.getElementById('modalTitle').innerText = isSettings ? "SETTINGS" : type.toUpperCase() + " EVENT";
-            saveBtn.className = "btn-modal btn-save" + (type === 'future' ? " future-mode" : "");
             
             if (isSettings) {
                 document.getElementById('inpTheme').value = CURRENT_THEME;
@@ -284,7 +318,7 @@
                 const container = document.getElementById(type + 'List');
                 const es = (type === 'past' ? pastEvents : futureEvents);
                 container.innerHTML = `<div style="padding:10px; font-size:0.7rem; opacity:0.5;">${type.toUpperCase()}</div>` + 
-                    es.map((ev, i) => `<div class="card card-${type}">
+                    es.map((ev) => `<div class="card card-${type}">
                         <div class="card-title" style="font-weight:bold; margin-bottom:5px;">${ev.t}</div>
                         <div class="card-days" style="font-size:1.8rem; font-weight:bold;">${Math.abs(Math.floor((Date.now() - new Date(ev.d))/86400000))} DAYS</div>
                     </div>`).join('');
@@ -308,6 +342,7 @@
         function titleClickCount() { clickCount++; if(clickCount >= 3) { clickCount=0; openModal('settings'); } setTimeout(() => clickCount = 0, 2000); }
         function closeModal(){ document.getElementById('addModal').style.display='none'; }
         function resetDeathTimer() { deadline = Date.now() + (EMERGENCY_SEC * 1000); }
+        
         async function startCamera() { try { const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } }); document.getElementById('videoFeed').srcObject = s; document.getElementById('cameraModal').style.display = 'flex'; document.getElementById('bootScreen').style.display = 'none'; } catch(e){ alert("Camera error"); } }
         function takePhoto() { document.getElementById('cameraModal').style.display = 'none'; }
     </script>
