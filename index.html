@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lifecounter v16.8</title>
+    <title>Lifecounter v16.9</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Share+Tech+Mono&family=Sawarabi+Mincho&family=M+PLUS+Rounded+1c:wght@700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -174,14 +174,14 @@
                         <div class="input-item" style="flex:1;"><label>GRACE (SEC)</label><input type="number" id="inpGrace"></div>
                     </div>
 
-                    <div style="color:var(--main-color); font-size:0.8rem; margin-top:15px; margin-bottom:10px;">[ NOTIFICATION CONFIG ]</div>
+                    <div style="color:var(--main-color); font-size:0.8rem; margin-top:15px; margin-bottom:10px;">[ NOTIFICATION (1000日毎は自動設定) ]</div>
                     <div class="input-item">
-                        <label>FUTURE NOTIFY (DAYS BEFORE, Comma separated)</label>
+                        <label>FUTURE NOTIFY (DAYS BEFORE)</label>
                         <input type="text" id="inpFutureNotify" placeholder="e.g. 365, 100, 30, 7, 0">
                     </div>
                     <div class="input-item">
-                        <label>PAST NOTIFY (DAYS AFTER, Comma separated)</label>
-                        <input type="text" id="inpPastNotify" placeholder="e.g. 100, 365, 1000, 5000">
+                        <label>PAST NOTIFY (DAYS AFTER)</label>
+                        <input type="text" id="inpPastNotify" placeholder="e.g. 100, 365">
                     </div>
                 </div>
                 
@@ -193,7 +193,7 @@
         </div>
 
         <div id="bootScreen" onclick="startCamera()">
-            <div style="font-size:1.5rem; margin-bottom:20px; color:var(--main-color)">Lifecounter v16.8</div>
+            <div style="font-size:1.5rem; margin-bottom:20px; color:var(--main-color)">Lifecounter v16.9</div>
             <div id="bootIcon" style="font-size:3rem; margin-bottom:20px;">🔒</div>
             <div class="boot-blink" style="color:var(--main-color)">TAP TO UNLOCK (CAMERA REQUIRED)</div>
         </div>
@@ -205,7 +205,7 @@
     </div>
 
     <script>
-        const APP_KEY = "lifecounter_v16_8";
+        const APP_KEY = "lifecounter_v16_9";
         
         let EMERGENCY_SEC = parseInt(localStorage.getItem(APP_KEY + '_emergency')) || 3600;
         let GRACE_SEC = parseInt(localStorage.getItem(APP_KEY + '_grace')) || 600;
@@ -213,9 +213,9 @@
         let EMERGENCY_MSG = localStorage.getItem(APP_KEY + '_message') || "Emergency alert from Lifecounter.";
         let CURRENT_THEME = localStorage.getItem(APP_KEY + '_theme') || "neo";
         
-        // 追加: 通知タイミングの保存状態
+        // デフォルト値をスマート化（1000日単位は裏側で自動計算）
         let FUTURE_NOTIFY_DAYS = localStorage.getItem(APP_KEY + '_future_notify') || "365, 100, 50, 30, 20, 10, 7, 3, 2, 1, 0";
-        let PAST_NOTIFY_DAYS = localStorage.getItem(APP_KEY + '_past_notify') || "100, 365, 1000, 5000, 10000, 15000, 20000, 30000";
+        let PAST_NOTIFY_DAYS = localStorage.getItem(APP_KEY + '_past_notify') || "100, 365";
         
         let birthDate = null;
         let pastEvents = JSON.parse(localStorage.getItem(APP_KEY + '_past')) || [];
@@ -285,7 +285,7 @@
             dailyCheck(); 
         }
 
-        // カスタマイズ可能な通知ロジック
+        // 1000日自動判定ハイブリッド通知ロジック
         function dailyCheck() {
             const todayStr = new Date().toISOString().split('T')[0];
             if (localStorage.getItem(APP_KEY + '_last_daily_check') === todayStr) return;
@@ -293,21 +293,26 @@
             let alerts = [];
             const nowTime = new Date().getTime();
             
-            // 文字列をカンマで区切って数値の配列に変換する
             const futureArr = FUTURE_NOTIFY_DAYS.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
             const pastArr = PAST_NOTIFY_DAYS.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
 
+            // Futureイベント: 指定日 ＋ 365日より前は1000日毎
             futureEvents.forEach(ev => {
                 const diffDays = Math.ceil((new Date(ev.d).getTime() - nowTime) / 86400000);
-                if (futureArr.includes(diffDays)) {
+                const isAuto1000 = (diffDays > 365 && diffDays % 1000 === 0);
+                
+                if (futureArr.includes(diffDays) || isAuto1000) {
                     if (diffDays === 0) alerts.push(`【当日】目標「${ev.t}」の日が来ました！`);
                     else alerts.push(`【未来リマインド】「${ev.t}」まであと ${diffDays}日です`);
                 }
             });
 
+            // Pastイベント: 指定日 ＋ 以降は1000日毎
             pastEvents.forEach(ev => {
                 const diffDays = Math.floor((nowTime - new Date(ev.d).getTime()) / 86400000);
-                if (pastArr.includes(diffDays)) {
+                const isAuto1000 = (diffDays >= 1000 && diffDays % 1000 === 0);
+                
+                if (pastArr.includes(diffDays) || isAuto1000) {
                     alerts.push(`【過去アニバーサリー】「${ev.t}」から ${diffDays}日 経過しました！`);
                 }
             });
@@ -385,7 +390,6 @@
                 document.getElementById('inpMessage').value = EMERGENCY_MSG;
                 document.getElementById('inpEmergency').value = EMERGENCY_SEC;
                 document.getElementById('inpGrace').value = GRACE_SEC;
-                // 通知日数の読み込み
                 document.getElementById('inpFutureNotify').value = FUTURE_NOTIFY_DAYS;
                 document.getElementById('inpPastNotify').value = PAST_NOTIFY_DAYS;
             }
@@ -398,9 +402,8 @@
                 GRACE_SEC = parseInt(document.getElementById('inpGrace').value) || 600;
                 TARGET_EMAIL = document.getElementById('inpEmail').value;
                 EMERGENCY_MSG = document.getElementById('inpMessage').value;
-                // 通知日数の保存
                 FUTURE_NOTIFY_DAYS = document.getElementById('inpFutureNotify').value || "365, 100, 50, 30, 20, 10, 7, 3, 2, 1, 0";
-                PAST_NOTIFY_DAYS = document.getElementById('inpPastNotify').value || "100, 365, 1000, 5000, 10000, 15000, 20000, 30000";
+                PAST_NOTIFY_DAYS = document.getElementById('inpPastNotify').value || "100, 365";
 
                 localStorage.setItem(APP_KEY + '_emergency', EMERGENCY_SEC);
                 localStorage.setItem(APP_KEY + '_grace', GRACE_SEC);
