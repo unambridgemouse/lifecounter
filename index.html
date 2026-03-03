@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lifecounter v16.6</title>
+    <title>Lifecounter v16.7</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Share+Tech+Mono&family=Sawarabi+Mincho&family=M+PLUS+Rounded+1c:wght@700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -180,9 +180,9 @@
         </div>
 
         <div id="bootScreen" onclick="startCamera()">
-            <div style="font-size:1.5rem; margin-bottom:20px; color:var(--main-color)">Lifecounter v16.6</div>
+            <div style="font-size:1.5rem; margin-bottom:20px; color:var(--main-color)">Lifecounter v16.7</div>
             <div id="bootIcon" style="font-size:3rem; margin-bottom:20px;">🔒</div>
-            <div class="boot-blink">TAP TO UNLOCK (CAMERA REQUIRED)</div>
+            <div class="boot-blink" style="color:var(--main-color)">TAP TO UNLOCK (CAMERA REQUIRED)</div>
         </div>
 
         <div id="cameraModal">
@@ -192,7 +192,7 @@
     </div>
 
     <script>
-        const APP_KEY = "lifecounter_v16_6";
+        const APP_KEY = "lifecounter_v16_7";
         let EMERGENCY_SEC = parseInt(localStorage.getItem(APP_KEY + '_emergency')) || 3600;
         let GRACE_SEC = parseInt(localStorage.getItem(APP_KEY + '_grace')) || 600;
         let TARGET_EMAIL = localStorage.getItem(APP_KEY + '_email') || "";
@@ -212,21 +212,23 @@
             const saved = localStorage.getItem(APP_KEY + '_birth');
             if (saved && saved !== "null") { 
                 birthDate = new Date(saved); 
-                checkDailyLog(); // 起動時にセルフィを要求するロジックへ
+                checkDailyLog(); 
             } else { 
                 showOnboarding(); 
             }
         };
 
-        // ログイン（アプリ使用）のためのセルフィ儀式チェック
+        // ログイン（アプリ使用）のためのセルフィ儀式チェック（修正版）
         function checkDailyLog() {
             const today = new Date().toISOString().split('T')[0];
+            
+            // 【重要修正】親コンテナは常に表示。bootScreenをかぶせて隠す。
+            document.getElementById('appContainer').style.display = 'flex'; 
+
             if (localStorage.getItem(APP_KEY + '_last_log') !== today) {
-                document.getElementById('appContainer').style.display = 'none';
                 document.getElementById('bootScreen').style.display = 'flex';
             } else {
                 document.getElementById('bootScreen').style.display = 'none';
-                document.getElementById('appContainer').style.display = 'flex';
                 startApp();
             }
         }
@@ -238,6 +240,21 @@
                 document.getElementById('obText').innerText += msg[i++];
                 if(i>=msg.length){ clearInterval(t); document.getElementById('obInputGroup').style.opacity=1; document.getElementById('obBtn').style.opacity=1; }
             }, 50);
+        }
+
+        // オンボーディング完了処理（修正版）
+        function finishOnboarding() {
+            const val = document.getElementById('obDate').value; if(!val) return;
+            localStorage.setItem(APP_KEY + '_birth', val); birthDate = new Date(val);
+            
+            // 初回登録時に「BIRTH」を自動追加
+            if (pastEvents.length === 0) {
+                pastEvents.push({t: "SYSTEM START (BIRTH)", d: val});
+                localStorage.setItem(APP_KEY + '_past', JSON.stringify(pastEvents));
+            }
+
+            document.getElementById('onboardingScreen').style.display = 'none'; 
+            checkDailyLog(); // そのままカメラ儀式へ
         }
 
         function applyTheme(theme) {
@@ -253,7 +270,6 @@
         }
 
         function startApp() { 
-            document.getElementById('appContainer').style.display = 'flex'; 
             setInterval(tick, 100); 
             renderLists(); 
             dailyCheck(); // 1日1回の通知チェックを実行
@@ -344,7 +360,6 @@
             document.getElementById('settingsFields').style.display = isSettings ? 'block' : 'none';
             document.getElementById('modalTitle').innerText = isSettings ? "SETTINGS" : type.toUpperCase() + " EVENT";
             
-            // Futureモード時のみ保存ボタンをオレンジ（未来色）にする
             saveBtn.className = "btn-modal btn-save" + (type === 'future' ? " future-mode" : "");
             
             if (isSettings) {
@@ -377,7 +392,6 @@
             renderLists(); closeModal();
         }
 
-        // 削除機能の復活
         function delEvent(type, index) {
             if (!confirm("本当にこのイベントを削除しますか？")) return;
             const arr = (type === 'past' ? pastEvents : futureEvents);
@@ -399,13 +413,6 @@
                         <div class="card-days" style="font-size:1.8rem; font-weight:bold;">${Math.abs(Math.floor((Date.now() - new Date(ev.d))/86400000))} DAYS</div>
                     </div>`).join('');
             });
-        }
-
-        function finishOnboarding() {
-            const val = document.getElementById('obDate').value; if(!val) return;
-            localStorage.setItem(APP_KEY + '_birth', val); birthDate = new Date(val);
-            document.getElementById('onboardingScreen').style.display = 'none'; 
-            checkDailyLog(); // オンボーディング後もカメラ起動を要求
         }
 
         function goTo(v) {
@@ -437,13 +444,12 @@
             
             document.getElementById('cameraModal').style.display = 'none'; 
             
-            // カメラを停止する
             const video = document.getElementById('videoFeed');
             if (video.srcObject) {
                 video.srcObject.getTracks().forEach(track => track.stop());
             }
 
-            checkDailyLog(); // これでメイン画面へ遷移
+            checkDailyLog(); 
         }
     </script>
 </body>
