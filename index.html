@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Lifecounter v16.7</title>
+    <title>Lifecounter v16.8</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Share+Tech+Mono&family=Sawarabi+Mincho&family=M+PLUS+Rounded+1c:wght@700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -93,11 +93,10 @@
         video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
         .shutter-btn { width: 70px; height: 70px; border-radius: 50%; background: #fff; border: 5px solid #333; cursor: pointer; position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%); z-index: 700; }
 
-        /* ALARM STYLE (💀ボタンの赤枠化) */
+        /* ALARM STYLE */
         .switch-btn { width: 64px; height: 64px; background: var(--bg-color); border: 2px solid var(--main-color); border-radius: 50%; color: var(--main-color); font-size: 1.8rem; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: all 0.3s; }
         .switch-btn.warning { border-color: var(--sub-color) !important; color: var(--sub-color) !important; animation: pulse-red 0.8s infinite alternate; }
         @keyframes pulse-red { 0% { box-shadow: 0 0 10px var(--sub-color); } 100% { box-shadow: 0 0 30px var(--sub-color); transform: scale(1.05); } }
-
     </style>
 </head>
 <body>
@@ -151,10 +150,12 @@
         <div id="addModal">
             <div class="modal-box">
                 <div id="modalTitle" style="color:var(--text-color); margin-bottom:15px; font-weight:bold;">SETTINGS</div>
+                
                 <div id="formFields">
                     <div class="input-item"><label>TITLE</label><input type="text" id="inpTitle"></div>
                     <div class="input-item"><label>DATE</label><input type="datetime-local" id="inpDate" step="1"></div>
                 </div>
+                
                 <div id="settingsFields" style="display:none; border-top:1px solid var(--border); padding-top:15px;">
                     <div class="input-item">
                         <label>THEME</label>
@@ -164,14 +165,26 @@
                             <option value="kawaii">Kawaii</option>
                         </select>
                     </div>
-                    <div style="color:var(--sub-color); font-size:0.8rem; margin-bottom:10px;">[ EMERGENCY PROTOCOL ]</div>
+                    
+                    <div style="color:var(--sub-color); font-size:0.8rem; margin-top:15px; margin-bottom:10px;">[ EMERGENCY PROTOCOL ]</div>
                     <div class="input-item"><label>EMAIL</label><input type="email" id="inpEmail"></div>
                     <div class="input-item"><label>MESSAGE</label><textarea id="inpMessage"></textarea></div>
                     <div style="display:flex; gap:10px;">
                         <div class="input-item" style="flex:1;"><label>LIMIT (SEC)</label><input type="number" id="inpEmergency"></div>
                         <div class="input-item" style="flex:1;"><label>GRACE (SEC)</label><input type="number" id="inpGrace"></div>
                     </div>
+
+                    <div style="color:var(--main-color); font-size:0.8rem; margin-top:15px; margin-bottom:10px;">[ NOTIFICATION CONFIG ]</div>
+                    <div class="input-item">
+                        <label>FUTURE NOTIFY (DAYS BEFORE, Comma separated)</label>
+                        <input type="text" id="inpFutureNotify" placeholder="e.g. 365, 100, 30, 7, 0">
+                    </div>
+                    <div class="input-item">
+                        <label>PAST NOTIFY (DAYS AFTER, Comma separated)</label>
+                        <input type="text" id="inpPastNotify" placeholder="e.g. 100, 365, 1000, 5000">
+                    </div>
                 </div>
+                
                 <div style="display:flex; gap:10px; margin-top:20px;">
                     <button class="btn-modal" style="background:#333; color:#ccc;" onclick="closeModal()">CANCEL</button>
                     <button class="btn-modal btn-save" id="btnSaveEvent" onclick="saveEvent()">SAVE</button>
@@ -180,7 +193,7 @@
         </div>
 
         <div id="bootScreen" onclick="startCamera()">
-            <div style="font-size:1.5rem; margin-bottom:20px; color:var(--main-color)">Lifecounter v16.7</div>
+            <div style="font-size:1.5rem; margin-bottom:20px; color:var(--main-color)">Lifecounter v16.8</div>
             <div id="bootIcon" style="font-size:3rem; margin-bottom:20px;">🔒</div>
             <div class="boot-blink" style="color:var(--main-color)">TAP TO UNLOCK (CAMERA REQUIRED)</div>
         </div>
@@ -192,12 +205,17 @@
     </div>
 
     <script>
-        const APP_KEY = "lifecounter_v16_7";
+        const APP_KEY = "lifecounter_v16_8";
+        
         let EMERGENCY_SEC = parseInt(localStorage.getItem(APP_KEY + '_emergency')) || 3600;
         let GRACE_SEC = parseInt(localStorage.getItem(APP_KEY + '_grace')) || 600;
         let TARGET_EMAIL = localStorage.getItem(APP_KEY + '_email') || "";
         let EMERGENCY_MSG = localStorage.getItem(APP_KEY + '_message') || "Emergency alert from Lifecounter.";
         let CURRENT_THEME = localStorage.getItem(APP_KEY + '_theme') || "neo";
+        
+        // 追加: 通知タイミングの保存状態
+        let FUTURE_NOTIFY_DAYS = localStorage.getItem(APP_KEY + '_future_notify') || "365, 100, 50, 30, 20, 10, 7, 3, 2, 1, 0";
+        let PAST_NOTIFY_DAYS = localStorage.getItem(APP_KEY + '_past_notify') || "100, 365, 1000, 5000, 10000, 15000, 20000, 30000";
         
         let birthDate = null;
         let pastEvents = JSON.parse(localStorage.getItem(APP_KEY + '_past')) || [];
@@ -218,13 +236,9 @@
             }
         };
 
-        // ログイン（アプリ使用）のためのセルフィ儀式チェック（修正版）
         function checkDailyLog() {
             const today = new Date().toISOString().split('T')[0];
-            
-            // 【重要修正】親コンテナは常に表示。bootScreenをかぶせて隠す。
             document.getElementById('appContainer').style.display = 'flex'; 
-
             if (localStorage.getItem(APP_KEY + '_last_log') !== today) {
                 document.getElementById('bootScreen').style.display = 'flex';
             } else {
@@ -242,19 +256,15 @@
             }, 50);
         }
 
-        // オンボーディング完了処理（修正版）
         function finishOnboarding() {
             const val = document.getElementById('obDate').value; if(!val) return;
             localStorage.setItem(APP_KEY + '_birth', val); birthDate = new Date(val);
-            
-            // 初回登録時に「BIRTH」を自動追加
             if (pastEvents.length === 0) {
                 pastEvents.push({t: "SYSTEM START (BIRTH)", d: val});
                 localStorage.setItem(APP_KEY + '_past', JSON.stringify(pastEvents));
             }
-
             document.getElementById('onboardingScreen').style.display = 'none'; 
-            checkDailyLog(); // そのままカメラ儀式へ
+            checkDailyLog(); 
         }
 
         function applyTheme(theme) {
@@ -272,28 +282,38 @@
         function startApp() { 
             setInterval(tick, 100); 
             renderLists(); 
-            dailyCheck(); // 1日1回の通知チェックを実行
+            dailyCheck(); 
         }
 
-        // 1日1回だけ走る、Futureイベントのカウントダウン通知
+        // カスタマイズ可能な通知ロジック
         function dailyCheck() {
             const todayStr = new Date().toISOString().split('T')[0];
             if (localStorage.getItem(APP_KEY + '_last_daily_check') === todayStr) return;
 
             let alerts = [];
-            const now = new Date();
-            const notifyDays = [100, 50, 30, 20, 10, 7, 3, 2, 1, 0];
+            const nowTime = new Date().getTime();
+            
+            // 文字列をカンマで区切って数値の配列に変換する
+            const futureArr = FUTURE_NOTIFY_DAYS.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+            const pastArr = PAST_NOTIFY_DAYS.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
 
             futureEvents.forEach(ev => {
-                const diffDays = Math.ceil((new Date(ev.d).getTime() - now.getTime()) / 86400000);
-                if (notifyDays.includes(diffDays)) {
+                const diffDays = Math.ceil((new Date(ev.d).getTime() - nowTime) / 86400000);
+                if (futureArr.includes(diffDays)) {
                     if (diffDays === 0) alerts.push(`【当日】目標「${ev.t}」の日が来ました！`);
-                    else alerts.push(`【リマインド】「${ev.t}」まであと ${diffDays}日です`);
+                    else alerts.push(`【未来リマインド】「${ev.t}」まであと ${diffDays}日です`);
+                }
+            });
+
+            pastEvents.forEach(ev => {
+                const diffDays = Math.floor((nowTime - new Date(ev.d).getTime()) / 86400000);
+                if (pastArr.includes(diffDays)) {
+                    alerts.push(`【過去アニバーサリー】「${ev.t}」から ${diffDays}日 経過しました！`);
                 }
             });
 
             if (alerts.length > 0) {
-                const msg = "Lifecounter カウントダウン通知\n\n" + alerts.join("\n");
+                const msg = "Lifecounter イベント通知\n\n" + alerts.join("\n");
                 sendGasNotification("EVENT NOTIFICATION", msg);
             }
             localStorage.setItem(APP_KEY + '_last_daily_check', todayStr);
@@ -313,19 +333,16 @@
 
             const skullBtn = document.getElementById('skullBtn');
 
-            // 演出と死活通知
             if (rem <= 0) {
                 document.body.style.backgroundColor = "#660000"; 
                 timerDisplay.style.color = "#ff0000";
-                skullBtn.classList.add('warning'); // ドクロ赤枠化
+                skullBtn.classList.add('warning'); 
                 
                 if (!emergencySent && TARGET_EMAIL) {
                     emergencySent = true; 
                     console.log("💀 緊急プロトコル発動...");
                     const msg = `${EMERGENCY_MSG}\n\n総生存日数: ${Math.floor(diff/86400000)}日\n最終ログ: ${new Date().toLocaleString()}`;
-                    sendGasNotification("EMERGENCY ALERT", msg).then(() => {
-                        alert("GASへアラートを送信しました。");
-                    });
+                    sendGasNotification("EMERGENCY ALERT", msg);
                 }
             } else {
                 document.body.style.backgroundColor = "var(--bg-color)";
@@ -368,6 +385,9 @@
                 document.getElementById('inpMessage').value = EMERGENCY_MSG;
                 document.getElementById('inpEmergency').value = EMERGENCY_SEC;
                 document.getElementById('inpGrace').value = GRACE_SEC;
+                // 通知日数の読み込み
+                document.getElementById('inpFutureNotify').value = FUTURE_NOTIFY_DAYS;
+                document.getElementById('inpPastNotify').value = PAST_NOTIFY_DAYS;
             }
             document.getElementById('addModal').style.display = 'flex';
         }
@@ -378,10 +398,16 @@
                 GRACE_SEC = parseInt(document.getElementById('inpGrace').value) || 600;
                 TARGET_EMAIL = document.getElementById('inpEmail').value;
                 EMERGENCY_MSG = document.getElementById('inpMessage').value;
+                // 通知日数の保存
+                FUTURE_NOTIFY_DAYS = document.getElementById('inpFutureNotify').value || "365, 100, 50, 30, 20, 10, 7, 3, 2, 1, 0";
+                PAST_NOTIFY_DAYS = document.getElementById('inpPastNotify').value || "100, 365, 1000, 5000, 10000, 15000, 20000, 30000";
+
                 localStorage.setItem(APP_KEY + '_emergency', EMERGENCY_SEC);
                 localStorage.setItem(APP_KEY + '_grace', GRACE_SEC);
                 localStorage.setItem(APP_KEY + '_email', TARGET_EMAIL);
                 localStorage.setItem(APP_KEY + '_message', EMERGENCY_MSG);
+                localStorage.setItem(APP_KEY + '_future_notify', FUTURE_NOTIFY_DAYS);
+                localStorage.setItem(APP_KEY + '_past_notify', PAST_NOTIFY_DAYS);
             } else {
                 const t = document.getElementById('inpTitle').value, d = document.getElementById('inpDate').value;
                 if(!t || !d) return;
