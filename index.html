@@ -12,12 +12,47 @@
     <div class="scanline"></div>
 
     <div id="onboardingScreen">
-        <div class="ob-logo">Lifecounter</div>
-        <div class="ob-text" id="obText"></div>
-        <div class="ob-input-group" id="obInputGroup">
-            <input type="datetime-local" id="obDate" step="1">
+
+        <!-- STEP 1: ウェルカムアニメーション -->
+        <div id="obStep1" class="ob-step">
+            <div class="ob-logo" id="obLogoMain">Lifecounter</div>
+            <div class="ob-welcome-lines" id="obWelcomeLines"></div>
+            <button class="ob-btn" id="obStartBtn" onclick="showTerms()">START</button>
         </div>
-        <button class="ob-btn" id="obBtn" onclick="finishOnboarding()">INITIALIZE</button>
+
+        <!-- STEP 2: 利用規約 -->
+        <div id="obStep2" class="ob-step" style="display:none;">
+            <div class="ob-section-title">TERMS OF SERVICE</div>
+            <div class="ob-terms-box">
+                <p>本アプリケーション「Lifecounter」（以下「本アプリ」）をご利用いただく前に、以下の利用規約をお読みください。</p>
+                <p>【1. データの保管について】<br>
+                入力された生年月日・イベント情報・写真データはすべてお使いの端末のローカルストレージおよびIndexedDB内にのみ保存されます。外部サーバーへのデータ送信は行いません（緊急プロトコル機能を除く）。</p>
+                <p>【2. 緊急プロトコルについて】<br>
+                緊急プロトコル機能を有効にした場合、設定されたメールアドレスへアラートが送信されます。送信先の管理はご自身の責任で行ってください。</p>
+                <p>【3. データの消去について】<br>
+                ブラウザのキャッシュ・ストレージを削除すると、保存されたすべてのデータが消去されます。バックアップはご自身で行ってください。</p>
+                <p>【4. 免責事項】<br>
+                本アプリの利用により生じたいかなる損害についても、開発者は責任を負いません。</p>
+                <p>【5. 年齢確認】<br>
+                本アプリは13歳以上の方を対象としています。</p>
+            </div>
+            <label class="ob-agree-label">
+                <input type="checkbox" id="obAgreeCheck" onchange="toggleAgreeBtn()">
+                <span>上記の利用規約を読み、同意します</span>
+            </label>
+            <button class="ob-btn" id="obAgreeBtn" onclick="showBirthInput()" disabled>AGREE &amp; CONTINUE</button>
+        </div>
+
+        <!-- STEP 3: 誕生日入力 -->
+        <div id="obStep3" class="ob-step" style="display:none;">
+            <div class="ob-section-title">INITIALIZE YOUR CORE</div>
+            <div class="ob-text" id="obText">あなたの誕生日時を入力してください</div>
+            <div class="ob-input-group" id="obInputGroup">
+                <input type="datetime-local" id="obDate" step="1">
+            </div>
+            <button class="ob-btn" id="obBtn" onclick="finishOnboarding()">INITIALIZE</button>
+        </div>
+
     </div>
 
     <div id="appContainer" style="display:none; width:100%; height:100%; flex-direction:column;">
@@ -88,6 +123,10 @@
                 </div>
 
                 <div id="settingsFields" style="display:none; border-top:1px solid var(--border); padding-top:15px;">
+                    <div style="color:var(--sub-color); font-size:0.8rem; margin-bottom:10px;">[ BIRTH DATE ]</div>
+                    <div class="input-item"><label>BIRTH DATE</label><input type="datetime-local" id="inpBirth" step="1"></div>
+                    <button onclick="resetAllData()" style="width:100%; margin-top:5px; margin-bottom:15px; padding:8px; background:#5c1a1a; color:#ff6b6b; border:1px solid #ff6b6b; border-radius:4px; font-size:0.75rem; letter-spacing:2px; cursor:pointer;">⚠ RESET ALL DATA</button>
+
                     <div class="input-item">
                         <label>THEME</label>
                         <select id="inpTheme" onchange="applyTheme(this.value)">
@@ -98,8 +137,10 @@
                     </div>
 
                     <div style="color:var(--sub-color); font-size:0.8rem; margin-top:15px; margin-bottom:10px;">[ EMERGENCY PROTOCOL ]</div>
-                    <div class="input-item"><label>EMAIL</label><input type="email" id="inpEmail"></div>
-                    <div class="input-item"><label>MESSAGE</label><textarea id="inpMessage"></textarea></div>
+                    <div class="input-item"><label>YOUR NAME</label><input type="text" id="inpName" placeholder="例: 橋口 太郎"></div>
+                    <div class="input-item"><label>EMAIL 1</label><input type="email" id="inpEmail1" placeholder="緊急連絡先①"></div>
+                    <div class="input-item"><label>EMAIL 2</label><input type="email" id="inpEmail2" placeholder="緊急連絡先②（任意）"></div>
+                    <div class="input-item"><label>EMAIL 3</label><input type="email" id="inpEmail3" placeholder="緊急連絡先③（任意）"></div>
                     <div style="display:flex; gap:10px;">
                         <div class="input-item" style="flex:1;"><label>LIMIT (SEC)</label><input type="number" id="inpEmergency"></div>
                         <div class="input-item" style="flex:1;"><label>GRACE (SEC)</label><input type="number" id="inpGrace"></div>
@@ -124,7 +165,7 @@
         </div>
 
         <div id="bootScreen" onclick="startCamera()">
-            <div style="font-size:1.5rem; margin-bottom:20px; color:var(--main-color)">Lifecounter v16.9</div>
+            <div style="font-size:1.5rem; margin-bottom:20px; color:var(--main-color)">Lifecounter v17.0</div>
             <div id="bootIcon" style="font-size:3rem; margin-bottom:20px;">🔒</div>
             <div class="boot-blink" style="color:var(--main-color)">TAP TO UNLOCK (CAMERA REQUIRED)</div>
         </div>
