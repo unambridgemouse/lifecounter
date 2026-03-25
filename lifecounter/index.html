@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Lifecounter v17.0</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+JP:wght@400;700&family=Share+Tech+Mono&family=Sawarabi+Mincho&family=Zen+Antique&family=M+PLUS+Rounded+1c:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="scanline"></div>
+
+    <div id="onboardingScreen">
+
+        <!-- STEP 1: ウェルカムアニメーション -->
+        <div id="obStep1" class="ob-step">
+            <div class="ob-logo" id="obLogoMain">Lifecounter</div>
+            <div class="ob-welcome-lines" id="obWelcomeLines"></div>
+            <button class="ob-btn" id="obStartBtn" onclick="showTerms()">START</button>
+        </div>
+
+        <!-- STEP 2: 利用規約 -->
+        <div id="obStep2" class="ob-step" style="display:none;">
+            <div class="ob-section-title">TERMS OF SERVICE</div>
+            <div class="ob-terms-box">
+                <p>本アプリケーション「Lifecounter」（以下「本アプリ」）をご利用いただく前に、以下の利用規約をお読みください。</p>
+                <p>【1. データの保管について】<br>
+                入力された生年月日・イベント情報・写真データはすべてお使いの端末のローカルストレージおよびIndexedDB内にのみ保存されます。外部サーバーへのデータ送信は行いません（緊急プロトコル機能を除く）。</p>
+                <p>【2. 緊急プロトコルについて】<br>
+                緊急プロトコル機能を有効にした場合、設定されたメールアドレスへアラートが送信されます。送信先の管理はご自身の責任で行ってください。</p>
+                <p>【3. データの消去について】<br>
+                ブラウザのキャッシュ・ストレージを削除すると、保存されたすべてのデータが消去されます。バックアップはご自身で行ってください。</p>
+                <p>【4. 免責事項】<br>
+                本アプリの利用により生じたいかなる損害についても、開発者は責任を負いません。</p>
+                <p>【5. 年齢確認】<br>
+                本アプリは13歳以上の方を対象としています。</p>
+            </div>
+            <label class="ob-agree-label">
+                <input type="checkbox" id="obAgreeCheck" onchange="toggleAgreeBtn()">
+                <span>上記の利用規約を読み、同意します</span>
+            </label>
+            <button class="ob-btn" id="obAgreeBtn" onclick="showBirthInput()" disabled>AGREE &amp; CONTINUE</button>
+        </div>
+
+        <!-- STEP 3: 誕生日入力 -->
+        <div id="obStep3" class="ob-step" style="display:none;">
+            <div class="ob-section-title">INITIALIZE YOUR CORE</div>
+            <div class="ob-text" id="obText">あなたの誕生日時を入力してください</div>
+            <div class="ob-input-group" id="obInputGroup">
+                <input type="datetime-local" id="obDate" step="1">
+            </div>
+            <button class="ob-btn" id="obBtn" onclick="finishOnboarding()">INITIALIZE</button>
+        </div>
+
+    </div>
+
+    <div id="appContainer" style="display:none; width:100%; height:100%; flex-direction:column;">
+        <header>
+            <div class="app-name" onclick="titleClickCount()">Lifecounter</div>
+            <div style="display:flex; gap:15px; align-items:center;">
+                <div onclick="openAlbum()" style="cursor:pointer; font-size:0.7rem; color:var(--dim-text); letter-spacing:2px;">ALBUM</div>
+                <div onclick="startCamera()" style="cursor:pointer; font-size:1.2rem;">📷</div>
+            </div>
+        </header>
+
+        <!-- 中央固定 NOW パネル（ゲージ全体がタップボタン） -->
+        <div id="now-panel">
+            <div style="display:flex; align-items:center; gap:14px; margin-bottom:14px;">
+                <span class="tl-label tl-label-future" style="font-size:0.7rem; letter-spacing:4px;">▲ FUTURE</span>
+                <div id="mainLabel" style="font-size:0.75rem; color:var(--dim-text); letter-spacing:4px;">TOTAL SURVIVAL</div>
+            </div>
+            <div class="gauge-wrapper" onclick="resetDeathTimer()">
+                <svg class="life-gauge" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+                    <circle class="gauge-track" cx="100" cy="100" r="88"/>
+                    <circle class="gauge-ring" id="lifeGaugeRing" cx="100" cy="100" r="88"/>
+                </svg>
+                <div id="skullWatermark" class="skull-watermark">💀</div>
+                <div class="gauge-inner">
+                    <div id="heroDays" class="count-days">0</div>
+                    <div style="font-size:0.65rem; color:var(--dim-text); letter-spacing:3px; margin-top:4px;">DAYS</div>
+                </div>
+            </div>
+            <div id="deadlineDisplay" class="deadline-display">---.-s</div>
+            <div style="display:flex; align-items:center; gap:14px; margin-top:6px;">
+                <span class="tl-label tl-label-past" style="font-size:0.65rem; letter-spacing:4px;">▼ PAST</span>
+                <div id="gaugeLabel" style="font-size:0.65rem; color:var(--dim-text); letter-spacing:2px;">TAP TO RESET</div>
+            </div>
+        </div>
+
+        <!-- スクロールタイムライン（NOWパネルの裏を通過） -->
+        <div id="timeline">
+
+            <section class="tl-section">
+                <div class="tl-section-header">
+                    <span class="tl-label tl-label-future" style="visibility:hidden;">▲ FUTURE</span>
+                    <div class="tl-add-btn tl-add-future" onclick="openModal('future')">＋</div>
+                </div>
+                <div id="futureList" class="tl-list"></div>
+            </section>
+
+            <!-- NOWパネルと同じ高さのスペーサー -->
+            <div id="now-spacer"></div>
+
+            <section class="tl-section tl-section-past">
+                <div class="tl-section-header">
+                    <span class="tl-label tl-label-past" style="visibility:hidden;">▼ PAST</span>
+                    <div class="tl-add-btn" onclick="openModal('past')">＋</div>
+                </div>
+                <div id="pastList" class="tl-list"></div>
+            </section>
+
+        </div>
+
+
+        <div id="addModal">
+            <div class="modal-box">
+                <div id="modalTitle" style="color:var(--text-color); margin-bottom:15px; font-weight:bold;">SETTINGS</div>
+
+                <div id="formFields">
+                    <div class="input-item"><label>TITLE</label><input type="text" id="inpTitle"></div>
+                    <div class="input-item"><label>DATE</label><input type="datetime-local" id="inpDate" step="1"></div>
+                </div>
+
+                <div id="settingsFields" style="display:none; border-top:1px solid var(--border); padding-top:15px;">
+                    <div style="color:var(--sub-color); font-size:0.8rem; margin-bottom:10px;">[ BIRTH DATE ]</div>
+                    <div class="input-item"><label>BIRTH DATE</label><input type="datetime-local" id="inpBirth" step="1"></div>
+                    <button onclick="resetAllData()" style="width:100%; margin-top:5px; margin-bottom:15px; padding:8px; background:#5c1a1a; color:#ff6b6b; border:1px solid #ff6b6b; border-radius:4px; font-size:0.75rem; letter-spacing:2px; cursor:pointer;">⚠ RESET ALL DATA</button>
+
+                    <div class="input-item">
+                        <label>THEME</label>
+                        <select id="inpTheme" onchange="applyTheme(this.value)">
+                            <option value="glass">Liquid Glass</option>
+                            <option value="zen">ZEN</option>
+                            <option value="kawaii">Kawaii</option>
+                        </select>
+                    </div>
+
+                    <div style="color:var(--sub-color); font-size:0.8rem; margin-top:15px; margin-bottom:10px;">[ EMERGENCY PROTOCOL ]</div>
+                    <div class="input-item"><label>YOUR NAME</label><input type="text" id="inpName" placeholder="例: 橋口 太郎"></div>
+                    <div class="input-item"><label>EMAIL 1</label><input type="email" id="inpEmail1" placeholder="緊急連絡先①"></div>
+                    <div class="input-item"><label>EMAIL 2</label><input type="email" id="inpEmail2" placeholder="緊急連絡先②（任意）"></div>
+                    <div class="input-item"><label>EMAIL 3</label><input type="email" id="inpEmail3" placeholder="緊急連絡先③（任意）"></div>
+                    <div style="display:flex; gap:10px;">
+                        <div class="input-item" style="flex:1;"><label>LIMIT (SEC)</label><input type="number" id="inpEmergency"></div>
+                        <div class="input-item" style="flex:1;"><label>GRACE (SEC)</label><input type="number" id="inpGrace"></div>
+                    </div>
+
+                    <div style="color:var(--main-color); font-size:0.8rem; margin-top:15px; margin-bottom:10px;">[ NOTIFICATION (1000日毎は自動設定) ]</div>
+                    <div class="input-item">
+                        <label>FUTURE NOTIFY (DAYS BEFORE)</label>
+                        <input type="text" id="inpFutureNotify" placeholder="e.g. 365, 100, 30, 7, 0">
+                    </div>
+                    <div class="input-item">
+                        <label>PAST NOTIFY (DAYS AFTER)</label>
+                        <input type="text" id="inpPastNotify" placeholder="e.g. 100, 365">
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:10px; margin-top:20px;">
+                    <button class="btn-modal" style="background:#333; color:#ccc;" onclick="closeModal()">CANCEL</button>
+                    <button class="btn-modal btn-save" id="btnSaveEvent" onclick="saveEvent()">SAVE</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="bootScreen" onclick="startCamera()">
+            <div style="font-size:1.5rem; margin-bottom:20px; color:var(--main-color)">Lifecounter v17.0</div>
+            <div id="bootIcon" style="font-size:3rem; margin-bottom:20px;">🔒</div>
+            <div class="boot-blink" style="color:var(--main-color)">TAP TO UNLOCK (CAMERA REQUIRED)</div>
+        </div>
+
+        <div id="cameraModal">
+            <video id="videoFeed" autoplay playsinline></video>
+            <div class="shutter-btn" onclick="takePhoto()"></div>
+        </div>
+
+        <!-- 写真拡大ビューア -->
+        <div id="photoViewer" onclick="closePhotoViewer()">
+            <div id="photoViewerInner" onclick="event.stopPropagation()">
+                <img id="photoViewerImg" src="" alt="">
+                <div id="photoViewerDate"></div>
+                <div class="photo-viewer-close" onclick="closePhotoViewer()">×</div>
+            </div>
+        </div>
+
+        <div id="albumModal">
+            <div class="album-box">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <div style="color:var(--main-color); font-weight:bold; letter-spacing:3px; font-size:0.9rem;">SURVIVAL ALBUM</div>
+                    <div onclick="closeAlbum()" style="cursor:pointer; color:var(--sub-color); font-size:1.5rem; line-height:1;">×</div>
+                </div>
+                <div id="albumGrid" class="album-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
